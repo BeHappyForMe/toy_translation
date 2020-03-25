@@ -99,7 +99,7 @@ def evaluate(args,model, dev_data):
     with torch.no_grad():#不需要更新模型，不需要梯度
         for src_sents,tgt_sents in batch_iter(dev_data,args.batch_size):
 
-            loss = model(src_sents,tgt_sents)
+            loss = -model(src_sents,tgt_sents).sum()
             num_words = np.sum([len(sen)-1 for sen in tgt_sents])
             total_loss += loss.item()
             total_num_words += num_words
@@ -128,7 +128,7 @@ def decode(args,model):
 
     print("load model from {}".format(args.model_path))
     model.load_state_dict(torch.load(args.model_path))
-    model.to(args.decice)
+    model.to(args.device)
 
     hypotheses = beam_search(model, test_data_src,
                              beam_size=int(args.beam_size),
@@ -184,7 +184,7 @@ def main():
     parse.add_argument("--test_data_dir", default='./data/test.txt', type=str, required=False)
     parse.add_argument("--output_file", default='translation_model.log', type=str, required=False)
     parse.add_argument("--batch_size", default=16, type=int)
-    parse.add_argument("--do_train",default=True, action="store_true", help="Whether to run training.")
+    parse.add_argument("--do_train", action="store_true", help="Whether to run training.")
     parse.add_argument("--do_test", default=True, action="store_true", help="Whether to run training.")
     parse.add_argument("--do_translate", action="store_true", help="Whether to run training.")
     parse.add_argument("--learnning_rate", default=5e-4, type=float)

@@ -205,17 +205,6 @@ class Seq2Seq(nn.Module):
         completed_hypotheses = []
 
         t = 0
-        #           a4
-        #       a2
-        #               a8
-        #           a5
-        #               a9
-        #   a1
-        #           a6
-        #       a3
-        #               a10
-        #           a7
-        #               a11
         # beam seach第一步留下topk，其余步k^2，留下topk
         while len(completed_hypotheses) < beam_size and t < max_decoding_time_step:
             t+=1
@@ -224,6 +213,9 @@ class Seq2Seq(nn.Module):
             exp_src_encodings = src_hid_encodings.expand(hyp_num,
                                                          src_hid_encodings.shape[1],
                                                          src_hid_encodings.shape[2])
+            exp_src_encod_att_linear = src_encod_att_linear.expand(hyp_num,
+                                                                   src_encod_att_linear.shape[1],
+                                                                   src_encod_att_linear.shape[2])
             # 取前一步解码出的word 【hyp_num】
             y_tm1 = torch.tensor([self.vocab.tgt[hyp[-1]] for hyp in hypotheses],dtype=torch.long,device=self.device)
             # 【hyp_num, embed_size】
@@ -231,7 +223,7 @@ class Seq2Seq(nn.Module):
             # 【hyp_num, embed+h】
             Ybar_t = torch.cat((y_t_embed,att_tm1),dim=-1)
             # 单个句子/解码无需
-            h_t, att_t, _ = self.decoder.step(Ybar_t,h_tm1,src_hid_encodings,src_encod_att_linear,None)
+            h_t, att_t, _ = self.decoder.step(Ybar_t,h_tm1,exp_src_encodings,exp_src_encod_att_linear,None)
 
             # 译文对数似然概率分布 【hyp_num, vocab_size】
             log_p_t = F.log_softmax(self.target_vocab_projection(att_t),dim=-1)
@@ -281,8 +273,6 @@ class Seq2Seq(nn.Module):
         completed_hypotheses.sort(key=lambda hyp: hyp.score, reverse=True)
 
         return completed_hypotheses
-
-
 
 
     def generate_sent_masks(self,x_padded,x_lengths):
